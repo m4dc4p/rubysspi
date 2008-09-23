@@ -1,0 +1,83 @@
+#
+# = bin/apply_sspi_patch
+#
+# Copyright (c) 2006-2007 Justin Bailey
+# 
+# Written and maintained by Justin Bailey <jgbailey@gmail.com>.
+#
+# This program is free software. You can re-distribute and/or
+# modify this program under the same terms of ruby itself ---
+# Ruby Distribution License or GNU General Public License.
+#
+
+# This file will patch the local net/http installation to include support for NTLM/Negotiate authentication.
+# The original http.rb file will be renamed to http.orig.N.rb
+
+require 'rbconfig'
+require 'pathname'
+require 'fileutils'
+
+begin
+  require 'net/http'
+  if Net::HTTP.sspi?
+		puts <<-EOF
+You don't need to patch - it appears to have already been installed.
+
+If you wish to upgrade your patch, please delete the previous patch by 
+renaming net/http.orig.1.rb to http.rb, and deleting any other
+http.orig.N.rb files which may exist, then run this file again.
+	EOF
+
+		exit
+	end
+	
+rescue NoMethodError
+end
+
+begin 
+	require 'rubygems'
+	require 'win32/sspi/http_proxy_patch'
+rescue LoadError
+	puts "Unable to load ruby gems or the rubysspi gem. You cannot patch until the gem is installed."
+	exit
+end
+
+# Original http.rb file
+orig_file = Pathname.new(Config::CONFIG["rubylibdir"]) + 'net\http.rb'
+
+# Determine that original actually exists
+raise "Original http.rb not not found at expected location #{orig_file}" unless orig_file.exist?
+
+# Determine name to copy original file to
+@i += 1 while (orig_dest = Pathname.new(Config::CONFIG["rubylibdir"]) + "net\\http.orig.#{@i ||= 1}.rb").exist?
+
+# Copy original to back up
+puts "Backing up original #{orig_file} to #{orig_dest}"
+FileUtils.cp orig_file, orig_dest
+
+# Get path to current version of the gem.
+spec = Gem::GemPathSearcher.new.find("win32/sspi")
+unless spec
+	puts "Unable to find path win32/sspi in gem repository. Can't install patch."
+	exit
+end
+
+gem_path = Pathname.new(spec.full_gem_path) + "lib"
+
+# Write patch file. 
+puts "Creating patch file to replace #{orig_file}"
+orig_file.open("w") { |f| f.write(<<EOS) }
+# Include original net/http
+require 'net/#{orig_dest.basename(orig_dest.extname)}'
+
+# This magic constant can be defined to disable the patch. 
+unless defined? DISABLE_RUBY_SSPI_PATCH
+	# Because rubygems >= 0.9.2 requires net/http, 
+	# we can't depend on ruby gems here. Instead, directly
+	# require path containing RubySSPI gem.
+	$: << "#{gem_path}" unless $:.include?("#{gem_path}")
+  require 'win32/sspi/http_proxy_patch'
+end
+EOS
+
+puts 'Patch applied! Please run ..\test\test_patched_net_http.rb to test the patch.'

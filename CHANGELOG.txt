@@ -1,0 +1,16 @@
+== 1.2.4
+ * Compatibility updates for rubygems 1.2.0
+ 
+== 1.2.2
+ * Fixed incompatibility with RubyGems >= 0.9.2 and RubySSPI Net::HTTP patch. Patch now directly requires the SSPI files, rather than relying on RubyGems to load it.
+ * Updated gem tests for compatibility with RubyGems >= 0.9.2.
+
+== 1.2.0
+ * Refactored naming in preparation for inclusion in ruby distribution
+   * rubysspi.rb renamed to win32/sspi.rb
+   * rubysspi/proxy_auth.rb renamed to win32/net/http_proxy_patch.rb
+ * Updated apply_sspi_patch to determine if RubySSPI gem is installed and fail if not. Also fails if the patch has already been installed.
+ * Added test to "test_patched_net_http.rb" to ensure net/http has been patched first.
+ * Removed Win32 platform restriction on gem (though it will still only run in Win32 environments, real or emulated).
+ * CHANGELOG begun
+   
