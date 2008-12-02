@@ -6,7 +6,7 @@ require 'rake/testtask'
 spec = Gem::Specification.new do |s|
 	s.name = "rubysspi"
 	s.summary = "A library which implements Ruby bindings to the Win32 SSPI library. Also includes a module to add Negotiate authentication support to Net::HTTP."
-	s.version = "1.2.4"
+	s.version = "1.2.5"
 	s.author = "Justin Bailey"
 	s.email = "jgbailey @nospam@ gmail.com"
 	s.homepage = "http://rubyforge.org/projects/rubysspi/"

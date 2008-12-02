@@ -62,20 +62,21 @@ unless spec
 	exit
 end
 
-gem_path = Pathname.new(spec.full_gem_path) + "lib"
+gem_path = (Pathname.new(spec.full_gem_path) + "lib").sub(Config::TOPDIR, "\#{Config::TOPDIR}")
 
 # Write patch file. 
 puts "Creating patch file to replace #{orig_file}"
 orig_file.open("w") { |f| f.write(<<EOS) }
 # Include original net/http
 require 'net/#{orig_dest.basename(orig_dest.extname)}'
+require 'rbconfig'
 
 # This magic constant can be defined to disable the patch. 
 unless defined? DISABLE_RUBY_SSPI_PATCH
 	# Because rubygems >= 0.9.2 requires net/http, 
 	# we can't depend on ruby gems here. Instead, directly
 	# require path containing RubySSPI gem.
-	$: << "#{gem_path}" unless $:.include?("#{gem_path}")
+	$: << %(#{gem_path}) unless $:.include?(%(#{gem_path}))
   require 'win32/sspi/http_proxy_patch'
 end
 EOS
