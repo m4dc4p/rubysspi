@@ -1,3 +1,6 @@
+== 1.2.5
+ * Fixed patching on net/http so hard-coded paths are not used, but paths from rbconfig.
+ 
 == 1.2.4
  * Compatibility updates for rubygems 1.2.0
  
