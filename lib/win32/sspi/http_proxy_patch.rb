@@ -78,10 +78,10 @@ module Net
             end_transport req, res
             begin_transport req
             if proxy?
-              req["Proxy-Authorization"] = "#{tok} #{n.get_initial_token}"
+              req["Proxy-Authorization"] = "#{tok} #{n.get_initial_token(tok)}"
               req["Proxy-Connection"] = "Keep-Alive"
             else
-              req["Authorization"] = "#{tok} #{n.get_initial_token}"
+              req["Authorization"] = "#{tok} #{n.get_initial_token(tok)}"
             end
             # Some versions of ISA will close the connection if this isn't present.
             req["Connection"] = "Keep-Alive"

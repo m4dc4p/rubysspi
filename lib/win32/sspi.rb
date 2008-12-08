@@ -224,9 +224,14 @@ module Win32
 				raise "http must respond to :get" unless http.respond_to?(:get)
 				nego_auth = self.new user, domain
 	      
-				resp = http.get path, { "Proxy-Authorization" => "Negotiate " + nego_auth.get_initial_token }
-				if resp["Proxy-Authenticate"]
+				resp = http.get path, { "Proxy-Authorization" => "Negotiate " + nego_auth.get_initial_token("Negotiate") }
+				# Negotiate may not be supported, so we need to look for NTLM too.
+				
+				if resp["Proxy-Authenticate"].include? "Negotiate"
 					resp = http.get path, { "Proxy-Authorization" => "Negotiate " + nego_auth.complete_authentication(resp["Proxy-Authenticate"].split(" ").last.strip) }
+				elsif resp["Proxy-Authenticate"].include? "NTLM"
+					resp = http.get path, { "Proxy-Authorization" => "NTLM " + nego_auth.get_initial_token("NTLM") }
+					resp = http.get path, { "Proxy-Authorization" => "NTLM " + nego_auth.complete_authentication(resp["Proxy-Authenticate"].split(" ").last.strip) }
 				end
 
 				resp
@@ -247,9 +252,11 @@ module Win32
 
 			# Gets the initial Negotiate token. Returns it as a base64 encoded string suitable for use in HTTP. Can
 			# be easily decoded, however.
-			def get_initial_token
+			#
+			# auth_type is the authentication method being used. It is usually "Negotiate" or "NTLM".
+			def get_initial_token(auth_type)
 				raise "This object is no longer usable because its resources have been freed." if @cleaned_up
-				get_credentials
+				get_credentials auth_type
 
 				outputBuffer = SecurityBuffer.new
 				@context = CtxtHandle.new
@@ -275,7 +282,7 @@ module Win32
 				# Nil token OK, just set it to empty string      
 				token = "" if token.nil?
 
-				if token.include? "Negotiate"
+				if token.include?("Negotiate") || token.include?("NTLM")
 					# If the Negotiate prefix is passed in, assume we are seeing "Negotiate <token>" and get the token.
 					token = token.split(" ").last
 				end
@@ -314,11 +321,13 @@ module Win32
 			end
 
 			# Gets credentials based on user, domain or both. If both are nil, an error occurs
-			def get_credentials
+			#
+			# auth_type is the authentication type being used. It usually either "Negotiate" or "NTLM".
+			def get_credentials(auth_type)
 				@credentials = CredHandle.new
 				ts = TimeStamp.new
 				@identity = Identity.new @user, @domain
-				result = SSPIResult.new(API::AcquireCredentialsHandle.call(nil, "Negotiate", SECPKG_CRED_OUTBOUND, nil, @identity.to_p, 
+				result = SSPIResult.new(API::AcquireCredentialsHandle.call(nil, auth_type, SECPKG_CRED_OUTBOUND, nil, @identity.to_p, 
 					nil, nil, @credentials.to_p, ts.to_p))
 				raise "Error acquire credentials: #{result}" unless result.ok?
 			end

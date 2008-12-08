@@ -32,8 +32,16 @@ class NTLMTest < Test::Unit::TestCase
     
     Net::HTTP.Proxy(proxy.host, proxy.port).start("www.google.com") do |http|
       nego_auth = Win32::SSPI::NegotiateAuth.new 
-      sr = http.request_get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.get_initial_token }
-      resp = http.get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.complete_authentication(sr["Proxy-Authenticate"].split(" ").last.strip) }
+      sr = http.request_get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.get_initial_token("Negotiate") }
+      if sr["Proxy-Authenticate"].include? "Negotiate"
+	      resp = http.get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.complete_authentication(sr["Proxy-Authenticate"].split(" ").last.strip) }
+			elsif sr["Proxy-Authenticate"].include? "NTLM"
+				sr = http.get "/", { "Proxy-Authorization" => "NTLM " + nego_auth.get_initial_token("NTLM") }
+				resp = http.get "/", { "Proxy-Authorization" => "NTLM " + nego_auth.complete_authentication(sr["Proxy-Authenticate"].split(" ").last.strip) }
+      else
+				raise "Proxy-Authentica method must be either NTLM or Negotiate. Got #{sr["Proxy-Authenticate"].inspect}"
+      end
+      
       # Google redirects to country of origins domain if not US.
       assert success_or_redirect(resp.code), "Response code not as expected: #{resp.inspect}"
       resp = http.get "/foobar.html"
@@ -56,8 +64,17 @@ class NTLMTest < Test::Unit::TestCase
     
     Net::HTTP.Proxy(proxy.host, proxy.port).start("www.google.com") do |http|
       nego_auth = Win32::SSPI::NegotiateAuth.new 
-      sr = http.request_get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.get_initial_token }
-      resp = http.get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.complete_authentication(sr["Proxy-Authenticate"].split(" ").last.strip) }
+      sr = http.request_get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.get_initial_token("Negotiate") }
+
+      if sr["Proxy-Authenticate"].include? "Negotiate"
+	      resp = http.get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.complete_authentication(sr["Proxy-Authenticate"].split(" ").last.strip) }
+			elsif sr["Proxy-Authenticate"].include? "NTLM"
+				sr = http.get "/", { "Proxy-Authorization" => "NTLM " + nego_auth.get_initial_token("NTLM") }
+				resp = http.get "/", { "Proxy-Authorization" => "NTLM " + nego_auth.complete_authentication(sr["Proxy-Authenticate"].split(" ").last.strip) }
+      else
+				raise "Proxy-Authentica method must be either NTLM or Negotiate. Got #{sr["Proxy-Authenticate"].inspect}"
+      end
+      
       assert success_or_redirect(resp.code), "Response code not as expected: #{resp.inspect}"
       assert_raises(RuntimeError, "Should not be able to call complete_authentication again") do
         nego_auth.complete_authentication "foo"
@@ -71,19 +88,38 @@ class NTLMTest < Test::Unit::TestCase
     # Test that raw token works
     Net::HTTP.Proxy(proxy.host, proxy.port).start("www.google.com") do |http|
       nego_auth = Win32::SSPI::NegotiateAuth.new 
-      sr = http.request_get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.get_initial_token }
-      token = Base64.decode64(sr["Proxy-Authenticate"].split(" ").last.strip)
-      completed_token = nego_auth.complete_authentication(token)
-      resp = http.get "/", { "Proxy-Authorization" => "Negotiate " + completed_token }
-      assert success_or_redirect(resp.code), "Response code not as expected: #{resp.inspect}"
+      sr = http.request_get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.get_initial_token("Negotiate") }
+
+      if sr["Proxy-Authenticate"].include? "Negotiate"
+				token = Base64.decode64(sr["Proxy-Authenticate"].split(" ").last.strip)
+				completed_token = nego_auth.complete_authentication(token)
+				resp = http.get "/", { "Proxy-Authorization" => "Negotiate " + completed_token }
+				assert success_or_redirect(resp.code), "Response code not as expected: #{resp.inspect}"
+			elsif sr["Proxy-Authenticate"].include? "NTLM"
+				sr = http.request_get "/", { "Proxy-Authorization" => "NTLM " + nego_auth.get_initial_token("NTLM") }
+				token = Base64.decode64(sr["Proxy-Authenticate"].split(" ").last.strip)
+				completed_token = nego_auth.complete_authentication(token)
+				resp = http.get "/", { "Proxy-Authorization" => "NTLM " + completed_token }
+				assert success_or_redirect(resp.code), "Response code not as expected: #{resp.inspect}"
+      else
+				raise "Proxy-Authentica method must be either NTLM or Negotiate. Got #{sr["Proxy-Authenticate"].inspect}"
+      end
     end
 
     # Test that token w/ "Negotiate" header included works
     Net::HTTP.Proxy(proxy.host, proxy.port).start("www.google.com") do |http|
       nego_auth = Win32::SSPI::NegotiateAuth.new 
-      sr = http.request_get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.get_initial_token }
-      resp = http.get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.complete_authentication(sr["Proxy-Authenticate"]) }
-      assert success_or_redirect(resp.code), "Response code not as expected: #{resp.inspect}"
+      sr = http.request_get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.get_initial_token("Negotiate") }
+      if sr["Proxy-Authenticate"].include? "Negotiate"
+				resp = http.get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.complete_authentication(sr["Proxy-Authenticate"]) }
+				assert success_or_redirect(resp.code), "Response code not as expected: #{resp.inspect}"
+			elsif sr["Proxy-Authenticate"].include? "NTLM"
+				sr = http.request_get "/", { "Proxy-Authorization" => "NTLM " + nego_auth.get_initial_token("NTLM") }
+				resp = http.get "/", { "Proxy-Authorization" => "NTLM " + nego_auth.complete_authentication(sr["Proxy-Authenticate"]) }
+				assert success_or_redirect(resp.code), "Response code not as expected: #{resp.inspect}"
+      else
+				raise "Proxy-Authentica method must be either NTLM or Negotiate. Got #{sr["Proxy-Authenticate"].inspect}"
+      end
     end
   end
   

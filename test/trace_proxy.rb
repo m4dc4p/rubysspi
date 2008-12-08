@@ -29,8 +29,14 @@ conn =  Net::HTTP.Proxy(proxy.host, proxy.port).new("www.google.com")
 conn.set_debug_output $stdout
 conn.start() do |http|
   nego_auth = Win32::SSPI::NegotiateAuth.new 
-  sr = http.request_get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.get_initial_token }
-  resp = http.get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.complete_authentication(sr["Proxy-Authenticate"].split(" ").last.strip) }
+  sr = http.request_get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.get_initial_token("Negotiate") }
+  if sr["Proxy-Authenticate"].include? "Negotiate"
+    resp = http.get "/", { "Proxy-Authorization" => "Negotiate " + nego_auth.complete_authentication(sr["Proxy-Authenticate"].split(" ").last.strip) }
+  elsif sr["Proxy-Authenticate"].include? "NTLM"
+    sr = http.request_get "/", { "Proxy-Authorization" => "NTLM " + nego_auth.get_initial_token("NTLM") }
+    resp = http.get "/", { "Proxy-Authorization" => "NTLM " + nego_auth.complete_authentication(sr["Proxy-Authenticate"].split(" ").last.strip) }
+  end
+  
   # Google redirects to country of origins domain if not US.
   raise "Response code not as expected: #{resp.inspect}" unless resp.code.to_i == 200 || resp.code.to_i == 302
   resp = http.get "/foobar.html"
