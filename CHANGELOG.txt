@@ -1,3 +1,7 @@
+== 1.3
+ * Updated library to work with either "Negotiate" or "NTLM" authorization schemes. Arguments to Win32::SSPI.get_initial_token have changed
+   but that should only impact code directly using the library. Net::HTTP support still works the same.
+   
 == 1.2.5
  * Fixed patching on net/http so hard-coded paths are not used, but paths from rbconfig.
  
