@@ -1,0 +1,6 @@
+*.sln
+*.suo
+*.stproj
+pkg
+_darcs
+doc
