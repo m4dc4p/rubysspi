@@ -31,7 +31,7 @@ class PatchedRubyTest < Test::Unit::TestCase
     
     Net::HTTP.Proxy(proxy.host, proxy.port).start("www.google.com") do |http|
       resp = http.get("/")
-      assert resp.code.to_i == 200, "Did not get response from Google as expected."
+      assert(resp.code.to_i == 200 || resp.code.to_i == 302, "Did not get response from Google as expected.")
     end
   end
 end
